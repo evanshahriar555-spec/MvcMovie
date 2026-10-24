@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MvcMovie.Models;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 public class MoviesController : Controller
 {
@@ -12,13 +13,45 @@ public class MoviesController : Controller
         _context = context;
     }
 
-    // GET: MOVIES
-    public async Task<IActionResult> Index()    
+
+
+
+    public async Task<IActionResult> Index(string movieGenre, string searchString)
     {
-        return View(await _context.Movie.ToListAsync());
+        // Get all available genres
+        var genreQuery = from m in _context.Movie
+                         orderby m.Genre
+                         select m.Genre;
+
+        // Get all movies
+        var movies = from m in _context.Movie
+                     select m;
+
+        // Search by movie title
+        if (!string.IsNullOrEmpty(searchString))
+        {
+            movies = movies.Where(s => s.Title!.Contains(searchString));
+        }
+
+        // Filter by genre
+        if (!string.IsNullOrEmpty(movieGenre))
+        {
+            movies = movies.Where(x => x.Genre == movieGenre);
+        }
+
+        // Prepare data for the view
+        var movieGenreVM = new MovieGenreViewModel
+        {
+            Genres = new SelectList(await genreQuery.Distinct().ToListAsync()),
+            Movies = await movies.ToListAsync(),
+            MovieGenre = movieGenre,
+            SearchString = searchString
+        };
+
+        return View(movieGenreVM);
     }
 
-    // GET: MOVIES/Details/5
+
     public async Task<IActionResult> Details(int? id)
     {
         if (id == null)
@@ -36,7 +69,7 @@ public class MoviesController : Controller
         return View(movie);
     }
 
-    // GET: MOVIES/Create
+   
     public IActionResult Create()
     {
         return View();
